@@ -14,14 +14,15 @@ contract UUPSProxyTest is StdCheats, Test {
     DeployCalculator deployCalculator;
     UpgradeCalculator upgradeCalculator;
     address owner = makeAddr("owner");
+    address proxy;
 
     function setUp() public {
         deployCalculator = new DeployCalculator();
         upgradeCalculator = new UpgradeCalculator();
+        proxy = deployCalculator.deployCalculator(owner);
     }
 
-    function test_CalculatorV1() public {
-        address proxy = deployCalculator.deployCalculator(owner);
+    function test_CalculatorV1() public view {
         int256 add = CalculatorV1(proxy).add(1, 2);
         uint64 version = CalculatorV1(proxy).version();
 
@@ -30,7 +31,6 @@ contract UUPSProxyTest is StdCheats, Test {
     }
 
     function test_Reverts_when_calling_unexisting_fn() public {
-        address proxy = deployCalculator.deployCalculator(owner);
         bytes memory calldataToExecute = abi.encodeWithSignature("mul(int256,int256)", [1, 2]);
         (bool sucess,) = address(proxy).call(calldataToExecute);
         assertEq(sucess, false);
@@ -38,12 +38,12 @@ contract UUPSProxyTest is StdCheats, Test {
 
     function test_UpgradeCalculator() public {
         CalculatorV2 calculatorV2 = new CalculatorV2();
-        address proxy = deployCalculator.deployCalculator(owner);
 
         address newProxy = upgradeCalculator.upgradeCalculator(proxy, address(calculatorV2), owner);
         int256 mul = CalculatorV2(newProxy).mul(2, 3);
         uint64 newVersion = CalculatorV2(newProxy).version();
 
+        assertEq(newProxy, proxy);
         assertEq(mul, 6);
         assertEq(newVersion, 2);
     }
